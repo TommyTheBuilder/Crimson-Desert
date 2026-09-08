@@ -46,9 +46,8 @@ Replace-UniqueLine `
 '            B("AddButton").ToolTip = !Cap("addItem") ? "Der Save-Editor-Helfer fehlt im runtime-Ordner." : Flag(state, "connected") ? "Crimson Desert vollständig schließen; Spielstände werden niemals bearbeitet, solange das Spiel läuft." : Integer(state, "saveCount", 0) == 0 ? "Kein save.save gefunden." : selectedCatalogItem != null && !itemAddable ? StringValue(selectedCatalogItem.Data, "reason", "Dieser Gegenstand wird noch nicht unterstützt.") : "Ausgewählten Gegenstand mit automatischer Sicherung in den neuesten Spielstand einfügen";' `
 'addItem tooltip'
 
-$oldAction = '                case "rebuildCatalog": return "Gegenstände werden aus den Spieldaten eingelesen …";'
-$newAction = $oldAction + [Environment]::NewLine + '                case "addItem": return "Spielstand wird gesichert, geprüft und der Gegenstand eingefügt …";'
-Replace-Required $oldAction $newAction 'addItem action label'
+$actionLines = '                case "addItem": return "Spielstand wird gesichert, geprüft und der Gegenstand eingefügt …";' + [Environment]::NewLine + '                default: return "Aktion wird ausgeführt …";'
+Replace-UniqueLine 'default: return "Aktion wird ausgeführt' $actionLines 'addItem action label'
 
 $out = [IO.Path]::GetFullPath($Output)
 [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($out)) | Out-Null
