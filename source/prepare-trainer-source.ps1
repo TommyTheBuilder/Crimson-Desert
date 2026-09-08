@@ -46,9 +46,6 @@ Replace-UniqueLine `
 '            B("AddButton").ToolTip = !Cap("addItem") ? "Der Save-Editor-Helfer fehlt im runtime-Ordner." : Flag(state, "connected") ? "Crimson Desert vollst\u00e4ndig schlie\u00dfen; Spielst\u00e4nde werden niemals bearbeitet, solange das Spiel l\u00e4uft." : Integer(state, "saveCount", 0) == 0 ? "Kein save.save gefunden." : selectedCatalogItem != null && !itemAddable ? StringValue(selectedCatalogItem.Data, "reason", "Dieser Gegenstand wird noch nicht unterst\u00fctzt.") : "Ausgew\u00e4hlten Gegenstand mit automatischer Sicherung in den neuesten Spielstand einf\u00fcgen";' `
 'addItem tooltip'
 
-$actionLines = '                case "addItem": return "Spielstand wird gesichert, gepr\u00fcft und der Gegenstand eingef\u00fcgt \u2026";' + [Environment]::NewLine + '                default: return "Aktion wird ausgef\u00fchrt \u2026";'
-Replace-UniqueLine 'default: return "Aktion wird' $actionLines 'addItem action label'
-
 $out = [IO.Path]::GetFullPath($Output)
 [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($out)) | Out-Null
 [IO.File]::WriteAllText($out, $text, (New-Object Text.UTF8Encoding($false)))
