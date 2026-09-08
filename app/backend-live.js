@@ -27,7 +27,18 @@ async function gameProcesses(){
   const raw=JSON.parse(json),all=Array.isArray(raw)?raw:[raw];
   return all.filter(p=>p&&Number.isInteger(p.id)&&typeof p.path==='string'&&p.path.length>0);
 }
-function addCandidate(list,value){if(typeof value==='string'&&value.trim())list.push(path.resolve(value.trim()));}
+function addCandidate(list,value){
+  if(typeof value!=='string'||!value.trim())return;
+  let resolved=path.resolve(value.trim().replace(/^"|"$/g,''));
+  const base=path.basename(resolved).toLowerCase();
+  // Accept any of the forms users naturally paste:
+  //   ...\\Crimson Desert
+  //   ...\\Crimson Desert\\bin64
+  //   ...\\Crimson Desert\\bin64\\CrimsonDesert.exe
+  if(base==='crimsondesert.exe')resolved=path.dirname(path.dirname(resolved));
+  else if(base==='bin64')resolved=path.dirname(resolved);
+  list.push(resolved);
+}
 async function gameDirValid(dir){const s=dir?await fsp.stat(path.join(dir,'bin64','CrimsonDesert.exe')).catch(()=>null):null;return !!s&&s.isFile();}
 async function steamRoots(){
   const roots=[];
@@ -41,7 +52,7 @@ async function steamRoots(){
 async function detectGameDirectory(){
   const candidates=[];
   try{const cfg=JSON.parse(await fsp.readFile(SETTINGS,'utf8'));addCandidate(candidates,cfg.gameDirectory);}catch(_){ }
-  try{for(const p of await gameProcesses())addCandidate(candidates,path.dirname(path.dirname(p.path)));}catch(_){ }
+  try{for(const p of await gameProcesses())addCandidate(candidates,p.path);}catch(_){ }
   for(const steam of await steamRoots()){
     addCandidate(candidates,path.join(steam,'steamapps','common','Crimson Desert'));
     try{
@@ -59,7 +70,7 @@ async function detectGameDirectory(){
   }catch(_){ }
   const seen=new Set();
   for(const dir of candidates){const k=dir.toLowerCase();if(seen.has(k))continue;seen.add(k);if(await gameDirValid(dir))return dir;}
-  throw new Error('CrimsonDesert.exe wurde nicht automatisch gefunden. Starte das Spiel einmal und versuche es erneut; dann wird der Pfad direkt aus dem laufenden Prozess übernommen.');
+  throw new Error('CrimsonDesert.exe wurde nicht automatisch gefunden. Erwartet wird <Spielordner>\\bin64\\CrimsonDesert.exe. Akzeptiert werden Spielordner, bin64-Ordner oder der vollständige EXE-Pfad.');
 }
 async function persistDetectedDirectory(){
   const dir=await detectGameDirectory();
