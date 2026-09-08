@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,6 +17,8 @@ jobs:
         run: |
           node --check app/backend.js
           node --check app/save-editor.js
+          node --check app/backend-live.js
+          node --check app/live-client.js
           node --check app/game-items.js
 
       - name: Build complete trainer
@@ -32,13 +34,15 @@ jobs:
             '.\PywelTrainer.exe',
             '.\runtime\node.exe',
             '.\runtime\PywelReader.exe',
-            '.\runtime\PywelSaveEditor.exe'
+            '.\runtime\PywelSaveEditor.exe',
+            '.\runtime\PywelInjector.exe',
+            '.\runtime\PywelLive.dll'
           )
           foreach ($file in $files) {
             if (-not (Test-Path -LiteralPath $file)) { throw "Missing release file: $file" }
             Get-Item -LiteralPath $file | Select-Object FullName,Length,LastWriteTime
+            Get-FileHash $file -Algorithm SHA256
           }
-          Get-FileHash '.\runtime\PywelSaveEditor.exe' -Algorithm SHA256
 
       - name: Package portable release
         shell: pwsh

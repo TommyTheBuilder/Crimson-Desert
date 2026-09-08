@@ -7,6 +7,16 @@ commit 70c9a00dd6e10b2081d706a837756844c11f5c2b.
 Copyright (c) 2026 XeTrinityz. MIT license; full text in TRINITY-LICENSE.txt.
 Source: https://github.com/XeTrinityz/Trinity
 
+## Pywel live bridge / Trinity
+
+Version 0.5 builds `runtime/PywelLive.dll` from the same pinned Trinity commit
+`70c9a00dd6e10b2081d706a837756844c11f5c2b` and adds a small Pywel-specific
+named-pipe bridge. The generated DLL is loaded into the running single-player game
+by `runtime/PywelInjector.exe`. The release build copies the upstream MIT license to
+`licenses/PywelLive-Trinity-MIT.txt`. The Pywel bridge source itself lives in
+`source/live/bridge.cpp`. No anti-cheat bypass is included; this integration is for
+single-player use only.
+
 ## External Windows reader
 
 Version 0.3 introduced a separate C# process with Windows query/read permissions.

@@ -4,17 +4,18 @@ $output = [IO.Path]::GetFullPath($OutputDirectory)
 $runtime = Join-Path $output 'runtime'
 New-Item -ItemType Directory -Force -Path $output,$runtime | Out-Null
 
-# Generate the compiled UI source from the reviewed base source. The transform
-# is deliberately fail-closed: if the expected controls drift, the build stops.
+# Generate the compiled UI source. The reviewed base source stays readable; the
+# transform only switches to the live supervisor and adjusts Add-Item gating.
 $generatedTrainer = & (Join-Path $PSScriptRoot 'prepare-trainer-source.ps1') -Source (Join-Path $PSScriptRoot 'TrainerApp.cs') -Output (Join-Path ([IO.Path]::GetTempPath()) 'PywelTrainer.TrainerApp.generated.cs')
 if (-not $generatedTrainer -or -not (Test-Path -LiteralPath $generatedTrainer)) { throw 'Der Trainer-Quelltext konnte nicht vorbereitet werden.' }
 
-# Build both external helpers first. A release is considered incomplete without
-# the read-only live reader and the offline save editor used for Add Item.
+# Build read-only reader, offline save editor, and live single-player bridge.
 & (Join-Path $PSScriptRoot 'reader\build.ps1') -OutputPath (Join-Path $runtime 'PywelReader.exe')
 if ($LASTEXITCODE -ne 0) { throw 'PywelReader.exe konnte nicht erstellt werden.' }
 & (Join-Path $PSScriptRoot 'save-editor\build.ps1') -OutputPath (Join-Path $runtime 'PywelSaveEditor.exe') -LicenseOutput (Join-Path $output 'licenses\CrimsonSaveEditor-MPL-2.0.txt')
 if ($LASTEXITCODE -ne 0) { throw 'PywelSaveEditor.exe konnte nicht erstellt werden.' }
+& (Join-Path $PSScriptRoot 'live\build.ps1') -RuntimeDirectory $runtime -LicenseOutput (Join-Path $output 'licenses\PywelLive-Trinity-MIT.txt')
+if ($LASTEXITCODE -ne 0) { throw 'Live-Spawner konnte nicht erstellt werden.' }
 
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $compiler = Join-Path $framework 'csc.exe'
@@ -26,7 +27,9 @@ if ($LASTEXITCODE -ne 0) { throw 'Trainer konnte nicht kompiliert werden.' }
 foreach ($required in @(
   (Join-Path $output 'PywelTrainer.exe'),
   (Join-Path $runtime 'PywelReader.exe'),
-  (Join-Path $runtime 'PywelSaveEditor.exe')
+  (Join-Path $runtime 'PywelSaveEditor.exe'),
+  (Join-Path $runtime 'PywelInjector.exe'),
+  (Join-Path $runtime 'PywelLive.dll')
 )) {
   if (-not (Test-Path -LiteralPath $required)) { throw "Release unvollständig: $required fehlt." }
 }

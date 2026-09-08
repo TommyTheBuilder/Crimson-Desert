@@ -1,87 +1,95 @@
 # Pywel Trainer für Crimson Desert
 
-Version 0.4 – externer Gegenstandskatalog, Inventarleser und sicheres Hinzufügen von Gegenständen für Steam-Build 25116796 / EXE 1.0.0.2760.
+Version 0.5 – Gegenstandskatalog, Inventarleser, **Live-Item-Spawner** und sicherer Offline-Save-Editor für Steam-Build 25116796 / EXE-Dateiversion 1.0.0.2760.
 
-**Verfügbar:** vollständiger Gegenstandskatalog aus der Installation, Inventar mit Mengen und deutschen Namen, getrennte Inventarbereiche, Anzeige der Spielerwerte, **Gegenstände hinzufügen**, Spielstandsicherungen und Diagnoseexport.
+**Verfügbar:** vollständiger Gegenstandskatalog aus der Installation, Inventar mit Mengen und deutschen Namen, getrennte Inventarbereiche, Anzeige der Spielerwerte, **Gegenstände während des Spielens spawnen**, Offline-Hinzufügen mit automatischer Sicherung, Spielstandsicherungen und Diagnoseexport.
 
-**Noch nicht verfügbar:** direktes Geldsetzen, Mengen vorhandener Laufzeit-Slots ändern, Spielerwerte auffüllen und Teleportieren. Diese Funktionen bleiben in der Oberfläche gesperrt.
+**Noch nicht verfügbar:** direktes Geldsetzen, Mengen vorhandener Laufzeit-Slots ändern, Spielerwerte auffüllen und Teleportieren.
 
-## Starten und Inventar lesen
+> Nur für Singleplayer verwenden. Nicht in Online-/Anti-Cheat-Modi einsetzen.
 
-1. Den ganzen Ordner zusammenlassen und PywelTrainer.exe starten.
-2. Crimson Desert starten, einen Spielstand laden und im Trainer „Mit Spiel verbinden“ wählen.
-3. „Geld & Waffen“ öffnen. Das Figureninventar wird nach der Verbindung automatisch geladen.
-4. Über den Bereichsfilter Figureninventar, Geld & Marken, Questgegenstände, Lager oder alle Bereiche auswählen.
-5. „Inventar aus dem Spiel laden“ aktualisiert die Momentaufnahme nach Änderungen im Spiel. Das Lesen benötigt keine Bewegung und keinen Kauf.
+## Spiel automatisch finden
 
-Voreingestellter Spielordner: F:\Steam\steamapps\common\Crimson Desert.
+Der Trainer verwendet keinen fest verdrahteten `F:\...`-Pfad mehr. Er sucht `CrimsonDesert.exe` in dieser Reihenfolge:
 
-## Gegenstände hinzufügen
+1. bereits gespeicherter gültiger Installationspfad,
+2. Pfad des aktuell laufenden `CrimsonDesert.exe`-Prozesses,
+3. Steam-Installationsordner plus alle Einträge aus `steamapps\libraryfolders.vdf`,
+4. Epic-Launcher-Manifeste unter `%PROGRAMDATA%`.
 
-Das Hinzufügen verwendet absichtlich **keine DLL-Injektion und keine direkten Speicher-Schreibzugriffe in Crimson Desert**. Stattdessen wird der geschlossene Spielstand bearbeitet und vor jeder Änderung automatisch gesichert.
+Wird das Spiel trotzdem nicht gefunden, Crimson Desert einmal starten und anschließend erneut „Mit Spiel verbinden“ drücken. Trainer und Spiel müssen auf derselben Windows-Rechteebene laufen.
 
-1. Im Spiel den gewünschten Spielstand speichern.
-2. **Crimson Desert vollständig schließen.** Solange ein `CrimsonDesert`-Prozess läuft, verweigert der Trainer jede Spielstandänderung.
-3. Pywel Trainer geöffnet lassen bzw. starten und „Geld & Waffen“ öffnen.
-4. Einen Gegenstand im lokalen Katalog auswählen und die gewünschte Anzahl eingeben.
-5. „Zum Inventar hinzufügen“ anklicken.
-6. Der Trainer nimmt den zuletzt geänderten gefundenen `save.save` als Ziel, erstellt zuerst eine datierte Sicherung unter `data\backups`, erzeugt den geänderten Spielstand in einer temporären Datei, validiert ihn und ersetzt erst danach atomar den Original-Spielstand.
-7. Crimson Desert wieder starten und den betreffenden Spielstand laden.
+## Live Gegenstände spawnen
 
-Der Ziel-Slot wird unter dem Gegenstand angezeigt. Wenn mehrere Steam-/Epic-Spielstände existieren, wird der zuletzt geänderte Slot verwendet. Eine freie Slot-Auswahl ist für eine spätere UI-Erweiterung vorgesehen.
+1. Crimson Desert starten und den gewünschten Spielstand vollständig laden.
+2. Pywel Trainer starten bzw. „Mit Spiel verbinden“ drücken.
+3. Unter „Geld & Waffen“ einen Gegenstand im lokalen Katalog auswählen.
+4. Menge eingeben und „Zum Inventar hinzufügen“ drücken.
+5. Die mitgelieferte `runtime\PywelInjector.exe` lädt `runtime\PywelLive.dll` in den **bereits laufenden** Crimson-Desert-Prozess. Danach kommuniziert der Trainer ausschließlich lokal über die Named Pipe `PywelTrainer-CrimsonDesert`.
+6. Der Live-Helfer löst den internen Gegenstandsschlüssel gegen die Gegenstandstabelle der laufenden Spielversion auf und nutzt den Item-Erzeugungs-/Inventar-Transaktionspfad der Engine. Der Gegenstand erscheint ohne Neustart im laufenden Inventar.
 
-Die Gegenstands-ID wird nicht frei eingegeben: Der Backend-Prozess akzeptiert nur einen Gegenstand, dessen `itemKey` und interner Schlüssel exakt im aktuell aus der installierten Spielversion gelesenen Katalog vorkommen. Damit werden versehentliche Fremd- oder Fantasie-IDs blockiert.
+Der Live-Spawner schreibt nicht einfach rohe Item-Strukturen in freie Slots. Das ist absichtlich so: ein Item benötigt eine gültige Instanz-ID und muss sowohl in die Client- als auch in die serverseitige Inventarspiegelung gelangen. Der zugrunde liegende Pfad basiert auf dem MIT-Projekt `XeTrinityz/Trinity` und wird beim Build aus einem fest gepinnten Commit erstellt.
 
-## Was geändert wurde
+Wenn die Live-Signaturen nach einem Spielupdate nicht mehr passen, meldet der Trainer „Live-Spawner noch nicht bereit“ bzw. eine konkrete Fehlermeldung und führt **keinen** unsicheren Fallback-Rohwrite aus.
 
-Die alte Verbindungskomponente verursachte bei der Prüfung einen Spielabsturz. Sie wird von dieser Fassung nicht mehr verwendet. PywelReader.exe läuft als separater Prozess und liest mit Windows-Leserechten. Es werden keine DLL, keine Spiel-Callbacks und keine Fernaufrufe in Crimson Desert installiert. Der Inventarleser besitzt keine Schreib-, Thread-Erstellungs- oder Beendigungsrechte am Spiel.
+## Offline-Hinzufügen als Fallback
 
-Für „Gegenstand hinzufügen“ kommt separat `runtime\PywelSaveEditor.exe` zum Einsatz. Dieser Helfer wird beim Release-Build aus dem gepinnten MPL-2.0-Projekt `NattKh/CRIMSON-DESERT-SAVE-EDITOR-AND-GAME-MODS` gebaut. Er bearbeitet ausschließlich die Save-Datei, wenn das Spiel geschlossen ist. Quelle, Commit und Lizenz stehen unter `licenses\NOTICE.md`; die MPL-2.0-Lizenz wird beim Build nach `licenses\CrimsonSaveEditor-MPL-2.0.txt` kopiert.
+Wenn Crimson Desert geschlossen ist, bleibt der bisherige sichere Save-Editor verfügbar:
 
-Die neue Erkennung berücksichtigt die veränderten Datentabellen und Inventarplätze von EXE 1.0.0.2760. Unvollständige oder widersprüchliche Momentaufnahmen werden abgewiesen. Andere Spielversionen benötigen ein geprüftes Leseprofil; der Offline-Katalog und die Spielstandsuche bleiben dabei unabhängig verfügbar.
+1. Spiel speichern und vollständig schließen.
+2. Gegenstand und Menge auswählen.
+3. „Zum Inventar hinzufügen“ klicken.
+4. Der neueste gefundene `save.save` wird vor der Änderung vollständig gesichert.
+5. Der Save-Editor erzeugt zunächst eine temporäre Datei, validiert diese und ersetzt erst danach den Original-Save. Bei einem Fehler wird zurückgerollt.
+
+Steam- und Epic-Spielstände unter `%LOCALAPPDATA%\Pearl Abyss\CD...` werden berücksichtigt.
+
+## Inventar lesen
+
+`runtime\PywelReader.exe` bleibt ein separater **read-only** Prozess. Er öffnet Crimson Desert nur mit Windows-Leserechten und liest Spieler-/Inventarwerte. Das Live-Spawning ist davon getrennt und läuft ausschließlich über `PywelLive.dll`.
+
+Die externe Leseerkennung prüft Dateiversion, Hauptmodulgröße, PE-Identität und eindeutige Laufzeit-Signaturen. Wenn eine Struktur nicht eindeutig ist, wird der Zugriff verweigert statt geraten.
 
 ## Vollständiger Gegenstandskatalog
 
-Alle 6.813 Datensätze der installierten Gegenstandstabelle werden aus den lokalen PAZ-Spielarchiven gelesen. 6.741 Namen sind deutsch; 72 Einträge zeigen ihren internen Namen, weil kein deutscher oder englischer Name vorhanden ist. Enthalten sind vorhandene Beschreibungen, permanente Spieldaten-ID, interner Schlüssel, maximale Stapelgröße und Gegenstandsgruppen.
+Der Katalog wird lokal aus den installierten PAZ-Spielarchiven, `ItemInfo`, `ItemGroupInfo` und den Sprachdateien erstellt. Es wird keine fertige heruntergeladene Gegenstandsliste verwendet. Namen, Beschreibungen, interner Schlüssel, permanente Spieldaten-ID, Stapelgrenze und Gruppen kommen aus deiner Installation.
 
-Der Katalog enthält 532 Waffen, 829 Rüstungs-/Zubehörgegenstände, 288 Materialien, 338 Verbrauchsgegenstände, 39 Geld-/Währungsgegenstände, 514 Questgegenstände und 4.273 sonstige Einträge. Auch interne oder unbenutzte Gegenstände sind enthalten; Sichtbarkeit bedeutet nicht, dass sie regulär im Spiel erhältlich sind.
+Die Suche erfasst deutsche/englische Namen, Beschreibungen, interne Schlüssel und IDs. Interne oder unbenutzte Definitionen können im Katalog sichtbar sein; die Live-Engine kann solche Einträge beim Hinzufügen ablehnen.
 
-Die Suche erfasst Namen, Beschreibungen, interne Schlüssel und IDs. Alle 91 Seiten sind über Zurück/Weiter erreichbar. „Neu einlesen“ erstellt den Katalog erneut aus der Installation. Es wird keine heruntergeladene Gegenstandsliste verwendet.
+## Sicherungen und Diagnose
 
-## Inventar und Spielerwerte
+„Spielstände sichern“ legt vollständige Kopien unter `data\backups` ab. Offline-Hinzufügen erstellt zusätzlich automatisch eine Sicherung vor jeder Änderung.
 
-Inventarlisten sind Momentaufnahmen. Die Mengen stammen aus dem laufenden Spiel. Namen werden über den exakten internen Schlüssel und die permanente ID aus dem lokalen Katalog ergänzt. Eine permanente Spieldaten-ID wird nicht als Laufzeit-ID oder Speicheradresse verwendet.
+„Protokoll → Diagnose speichern“ schreibt einen Bericht nach `data\diagnostics`. Version 0.5 enthält darin zusätzlich:
 
-Sehr große Stapelgrenzen werden als exakte Dezimalzeichenfolge erhalten. Geld & Marken enthält auch Lager- und Beitragsressourcen des Spiels; ein direktes Setzen des ausgebbaren Geldbetrags ist nicht enthalten. Spielerwerte werden als prozentualer Füllstand angezeigt; das Auffüllen ist gesperrt.
-
-Die getrennten Speicherbereiche hängen vom Spielstand ab. Die Option „Alle Bereiche“ kann interne, nicht regulär im Rucksack sichtbare Gegenstände enthalten. Bei einem Figurenwechsel oder Laden eines anderen Spielstands werden veraltete Listen entfernt.
-
-## Sicherungen und Fehler
-
-„Spielstände sichern“ kopiert die gefundenen Spielstände nach `data\backups`. Beim Hinzufügen wird zusätzlich automatisch der komplette ausgewählte Slot gesichert, **bevor** der Save-Editor gestartet wird. Jede vollständige Sicherung enthält ein Hashmanifest und einen `save`-Unterordner. `UNVOLLSTAENDIG.txt` kennzeichnet einen abgebrochenen Versuch.
-
-Unter „Protokoll → Diagnose speichern“ entsteht ein Bericht in `data\diagnostics`. Der Diagnosebericht enthält ab Version 0.4 auch Verfügbarkeit und Pfad des Save-Editor-Helfers sowie den gefundenen Ziel-Slot.
-
-Zum Wiederherstellen Crimson Desert schließen, den aktuellen Spielstandordner separat behalten und eine vollständige Sicherung an den im Manifest genannten Ursprungsort kopieren. Bei Steam-Cloud-Konflikten bewusst die gewünschte Kopie wählen.
+- automatisch erkannten Spielpfad,
+- laufende Prozess-/Buildinformationen,
+- Status von `PywelInjector.exe` und `PywelLive.dll`,
+- Named-Pipe-/Live-Spawner-Status,
+- Save-Editor-Verfügbarkeit,
+- letzte Fehlermeldungen.
 
 ## Release bauen
 
-`source\build.ps1` erzeugt jetzt zwingend alle drei ausführbaren Komponenten:
+`source\build.ps1` erzeugt bzw. prüft:
 
 - `PywelTrainer.exe`
 - `runtime\PywelReader.exe`
 - `runtime\PywelSaveEditor.exe`
+- `runtime\PywelInjector.exe`
+- `runtime\PywelLive.dll`
+- vorhandene `runtime\node.exe`
 
-Für `PywelSaveEditor.exe` werden Git, CMake und die Visual-Studio-C++-Buildtools benötigt. Das Buildskript lädt ausschließlich den gepinnten Upstream-Commit und baut den CLI-Helfer `parc_engine_cli` als Windows-x64-Programm. Fehlt eine der drei EXEs, schlägt der Release-Build fehl.
+Der Live-Build lädt den gepinnten Trinity-Quellstand, fügt nur die Pywel-Named-Pipe-Brücke hinzu und baut eine headless Variante ohne Ingame-Menü/DX12-Overlay. GitHub Actions prüft alle Node-Quellen, kompiliert Windows-x64 und erzeugt eine portable ZIP.
 
 ## Dateien und Quellen
 
-- `source`: C#-Oberfläche und Release-Buildskript.
-- `source/reader`: Quelltext und Buildskript des externen Windows-Lesers.
-- `source/save-editor`: reproduzierbares Buildskript für den gepinnten Save-Editor-Helfer.
-- `app`: Hintergrundprozess, Archivleser, Katalogsuche und sichere Save-Edit-Orchestrierung.
-- `runtime`: Node.js-Laufzeit, `PywelReader.exe` und im vollständigen Build `PywelSaveEditor.exe`.
-- `licenses`: Quellen- und Lizenzhinweise.
-- `data`: lokale Einstellungen, Protokolle, Cache, Sicherungen und Diagnosen; nicht Teil der sauberen Quellverteilung.
+- `source`: WPF-Trainer und Release-Buildskript.
+- `source/reader`: externer read-only Inventarleser.
+- `source/save-editor`: reproduzierbarer Build des Offline-Save-Editors.
+- `source/live`: Buildskript, x64-Injektor und lokale Named-Pipe-Brücke für Live-Spawning.
+- `app/live-client.js`: lokale Kommunikation zwischen Trainer und Live-DLL.
+- `runtime`: Node.js und die gebauten Windows-Komponenten.
+- `licenses`: Lizenz-/Quellhinweise für Trinity, Save-Editor und weitere Komponenten.
 
-Spielstrukturen wurden anhand der installierten EXE geprüft. Frühere Grundlagen stammen aus dem MIT-Projekt XeTrinityz/Trinity; weitere Primärquellen, die MPL-2.0-Quelle des Save-Editors und Archivformat-Lizenzen stehen in `licenses`. Dies ist ein unabhängiges Programm und kein offizielles Pearl-Abyss-Werkzeug.
+Pywel Trainer ist ein unabhängiges Community-Werkzeug und kein offizielles Pearl-Abyss-Programm.
