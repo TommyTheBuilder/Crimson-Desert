@@ -21,8 +21,18 @@ $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $compiler = Join-Path $framework 'csc.exe'
 if (-not (Test-Path -LiteralPath $compiler)) { throw 'Der 64-Bit-.NET-Framework-Compiler wurde nicht gefunden.' }
 $references = @('System.dll','System.Core.dll','System.Web.Extensions.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll','System.Xaml.dll') | ForEach-Object { '/reference:' + (Join-Path $framework $_) }
-& $compiler /nologo /target:winexe /platform:x64 /optimize+ /utf8output ('/out:' + (Join-Path $output 'PywelTrainer.exe')) ('/win32manifest:' + (Join-Path $PSScriptRoot 'app.manifest')) ('/resource:' + (Join-Path $PSScriptRoot 'MainWindow.xaml') + ',PywelTrainer.MainWindow.xaml') @references $generatedTrainer
+$resource = ('/resource:' + (Join-Path $PSScriptRoot 'MainWindow.xaml') + ',PywelTrainer.MainWindow.xaml')
+
+& $compiler /nologo /target:winexe /platform:x64 /optimize+ /utf8output ('/out:' + (Join-Path $output 'PywelTrainer.exe')) ('/win32manifest:' + (Join-Path $PSScriptRoot 'app.manifest')) $resource @references $generatedTrainer
 if ($LASTEXITCODE -ne 0) { throw 'Trainer konnte nicht kompiliert werden.' }
+
+# Catch startup regressions (missing x:Name, bad embedded XAML, constructor NRE)
+# before a portable release is published.
+$smoke = Join-Path ([IO.Path]::GetTempPath()) 'PywelTrainer.StartupSmoke.exe'
+& $compiler /nologo /target:exe /platform:x64 /optimize+ /utf8output /main:StartupSmoke ('/out:' + $smoke) $resource @references $generatedTrainer (Join-Path $PSScriptRoot 'StartupSmoke.cs')
+if ($LASTEXITCODE -ne 0) { throw 'Startup-Smoke-Test konnte nicht kompiliert werden.' }
+& $smoke
+if ($LASTEXITCODE -ne 0) { throw 'Trainer-Starttest ist fehlgeschlagen.' }
 
 foreach ($required in @(
   (Join-Path $output 'PywelTrainer.exe'),
