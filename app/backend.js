@@ -9,6 +9,7 @@ const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const { Worker } = require('node:worker_threads');
 const gameItems = require('./game-items');
+const saveEditor = require('./save-editor');
 const {ReaderProcess}=require('./reader-process');
 const runFile = promisify(execFile);
 const APP = __dirname;
@@ -21,6 +22,7 @@ let settings = { gameDirectory: DEFAULT_GAME };
 try { settings = Object.assign(settings, JSON.parse(fs.readFileSync(path.join(DATA,'settings.json'),'utf8'))); } catch (_) {}
 let state = { connected:false,pid:null,playerReady:false,message:'Starte Crimson Desert und lade einen Spielstand.',
   buildId:'',fileVersion:'',health:null,maxHealth:null,stamina:null,maxStamina:null,spirit:null,maxSpirit:null,
+  saveEditorAvailable:false,saveCount:0,saveTarget:null,saveTargetDisplay:null,
   capabilities:Object.assign({},FALSE_CAPS),toggles:{health:false,stamina:false,spirit:false} };
 let reader = null, stopping = false, polling = false, attaching = false;
 let serial = Promise.resolve(), lastError = '', installed = null;
@@ -38,7 +40,11 @@ function log(message, level = 'info') {
 }
 function sendState(patch) {
   state = Object.assign({},state,patch);
-  state.capabilities=Object.assign({},FALSE_CAPS,{inventory:!!state.capabilities.inventory,catalog:!!itemCatalog});
+  const caps=Object.assign({},FALSE_CAPS,state.capabilities||{});
+  caps.inventory=!!caps.inventory;
+  caps.catalog=!!itemCatalog;
+  caps.addItem=!!state.saveEditorAvailable;
+  state.capabilities=caps;
   emit({ event:'state',data:state });
   return state;
 }
@@ -53,6 +59,17 @@ async function powershell(code) {
   const result = await runFile(path.join(process.env.WINDIR || 'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe'),
     ['-NoProfile','-NonInteractive','-EncodedCommand',encoded], { windowsHide:true,encoding:'utf8',maxBuffer:1024*1024,timeout:20000 });
   return result.stdout.replace(/^\uFEFF/,'').trim();
+}
+async function isGameRunning() {
+  const value=await powershell("@(Get-Process -Name CrimsonDesert -ErrorAction SilentlyContinue).Count");
+  const count=Number(String(value||'0').trim());
+  if(!Number.isFinite(count))throw new Error('Der Spielprozess konnte für die sichere Spielstandänderung nicht geprüft werden.');
+  return count>0;
+}
+async function refreshSaveEditorState() {
+  const info=await saveEditor.status();
+  sendState(info);
+  return info;
 }
 async function inspect() {
   const directory = path.resolve(settings.gameDirectory);
@@ -71,11 +88,12 @@ async function inspect() {
     buildId=manifest.match(/"buildid"\s+"(\d+)"/i)?.[1]||buildId; } catch (_) {}
   try { fileVersion=await powershell('(Get-Item -LiteralPath '+psLiteral(exe)+').VersionInfo.FileVersion'); } catch (_) {}
   installed={directory,exe,buildId,fileVersion,size:stat.size,modified:stat.mtime.toISOString()};
-  sendState({buildId,fileVersion});
+  const saveInfo=await saveEditor.status().catch(()=>null);
+  sendState(Object.assign({buildId,fileVersion},saveInfo||{}));
   const message=`Installation erkannt. Steam-Build ${buildId}, Dateiversion ${fileVersion}. Die Spielfunktionen werden beim Verbinden geprüft.`;
   log(message);
   ensureCatalog().catch(e=>log('Katalog: '+e.message,'error'));
-  return Object.assign({message},installed);
+  return Object.assign({message},installed,saveInfo||{});
 }
 async function ensureCatalog(force=false) {
   if(catalogJob)return catalogJob;
@@ -98,8 +116,42 @@ async function ensureCatalog(force=false) {
   return catalogJob;
 }
 async function catalog(args){
-  const data=await ensureCatalog();const result=gameItems.search(data.items,args,data.metadata);
+  const data=await ensureCatalog();
+  const result=gameItems.search(data.items,args,data.metadata);
+  const available=!!state.saveEditorAvailable;
+  result.items=result.items.map(item=>Object.assign({},item,{
+    addable:available,
+    reason:available
+      ? 'Sicheres Hinzufügen über den Spielstand ist verfügbar. Crimson Desert muss dafür vollständig geschlossen sein.'
+      : 'Zum Hinzufügen fehlt runtime\\PywelSaveEditor.exe. Bitte den vollständigen Trainer-Build verwenden.'
+  }));
+  result.saveEditorAvailable=available;
+  result.saveCount=state.saveCount||0;
+  result.saveTarget=state.saveTarget||null;
+  result.saveTargetDisplay=state.saveTargetDisplay||null;
   return result;
+}
+async function saveSlots() {
+  const saves=await saveEditor.listSaves();
+  const info=await saveEditor.status();
+  sendState(info);
+  return {
+    items:saves.map(s=>({
+      name:s.display,
+      detail:s.path,
+      path:s.path,
+      platform:s.platform,
+      userId:s.userId,
+      slot:s.slot,
+      modified:s.modified,
+      size:s.size
+    })),
+    total:saves.length,
+    saveEditorAvailable:info.saveEditorAvailable,
+    saveTarget:info.saveTarget,
+    saveTargetDisplay:info.saveTargetDisplay,
+    message:saves.length ? `${saves.length} Spielstand${saves.length===1?'':'e'} gefunden.` : 'Kein Crimson-Desert-Spielstand gefunden.'
+  };
 }
 async function getGameProcess() {
   const json=await powershell("@(Get-Process -Name CrimsonDesert -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{id=$_.Id;path=$_.Path} }) | ConvertTo-Json -Compress");
@@ -188,7 +240,6 @@ async function backup(saveOverride, destinationOverride) {
       const hash=crypto.createHash('sha256').update(copied).digest('hex');
       records.push({file:rel,size:copied.length,sha256:hash,mtimeMs:before.mtimeMs});
     }
-    // Detect files added, removed or modified while the directory was copied.
     const afterFiles=await listFiles(source);
     if(afterFiles.length!==files.length||afterFiles.some((f,i)=>f!==files[i]))throw new Error('Spielstanddateien haben sich während der Sicherung geändert. Bitte erneut versuchen.');
     for(let i=0;i<files.length;i++) {
@@ -199,7 +250,6 @@ async function backup(saveOverride, destinationOverride) {
     const message=`${records.length} Spielstanddateien gesichert: ${folder}`;log(message);
     return {message,path:folder,count:records.length};
   } catch(e) {
-    // Keep failed snapshots identifiable, never offer them as complete backups.
     await fsp.writeFile(path.join(folder,'UNVOLLSTAENDIG.txt'),e.message).catch(()=>{});
     throw e;
   }
@@ -214,9 +264,11 @@ function validateCommand(cmd,args) {
     if(args.limit!==undefined&&(!Number.isInteger(args.limit)||args.limit<1||args.limit>1000))throw new Error('Ungültige Ergebnisanzahl.');
   }
   if(cmd==='addItem') {
-    if(!Number.isInteger(args.itemId)||args.itemId<1||args.itemId>65535)throw new Error('Ungültige Gegenstandskennung.');
+    if(!Number.isSafeInteger(args.itemKey)||args.itemKey<1||args.itemKey>0xFFFFFFFF)throw new Error('Ungültige Spieldaten-ID.');
     if(!Number.isSafeInteger(args.quantity)||args.quantity<1||args.quantity>999999)throw new Error('Menge muss zwischen 1 und 999999 liegen.');
-    if(!Number.isInteger(args.itemKey)||typeof args.key!=='string'||args.key.length>4096)throw new Error('Bitte einen Gegenstand aus dem Spieldatenkatalog auswählen.');
+    if(typeof args.key!=='string'||args.key.length<1||args.key.length>4096)throw new Error('Bitte einen Gegenstand aus dem Spieldatenkatalog auswählen.');
+    if(args.itemId!==null&&args.itemId!==undefined&&(!Number.isInteger(args.itemId)||args.itemId<0||args.itemId>65535))throw new Error('Ungültige Laufzeit-ID.');
+    if(args.savePath!==undefined&&(typeof args.savePath!=='string'||args.savePath.length<1||args.savePath.length>32768))throw new Error('Ungültiger Spielstandpfad.');
   }
   if(cmd==='setQuantity') {
     if(typeof args.slot!=='string'||args.slot.length>160)throw new Error('Bitte einen Inventareintrag auswählen.');
@@ -226,9 +278,34 @@ function validateCommand(cmd,args) {
   if(cmd==='travel'&&(!Number.isInteger(args.sceneId)||args.sceneId<0||args.sceneId>65535||!Number.isInteger(args.nodeIndex)||args.nodeIndex<0||args.nodeIndex>65535))throw new Error('Ungültiges Reiseziel.');
   if(cmd==='setToggle'&&(!['health','stamina','spirit'].includes(args.name)||typeof args.value!=='boolean'))throw new Error('Ungültiger Schalter.');
 }
+async function addItem(args) {
+  const data=await ensureCatalog();
+  const item=data.items.find(x=>x.itemKey===args.itemKey&&x.key===args.key);
+  if(!item)throw new Error('Der ausgewählte Gegenstand stimmt nicht mit dem aktuell eingelesenen Spieldatenkatalog überein.');
+  try {
+    const result=await saveEditor.addItem({
+      itemKey:args.itemKey,
+      quantity:args.quantity,
+      savePath:args.savePath
+    },{
+      backup,
+      isGameRunning,
+      log
+    });
+    const info=await saveEditor.status();
+    sendState(info);
+    result.state=state;
+    return result;
+  } catch(e) {
+    await refreshSaveEditorState().catch(()=>{});
+    throw e;
+  }
+}
 async function diagnostics() {
   const runtime=reader?await reader.request('diagnostics'):null;
-  const report={created:new Date().toISOString(),trainer:'0.3.0-external-reader',installation:installed,catalog:itemCatalog?itemCatalog.metadata:null,state,runtime,lastError,logs:recentLogs};
+  let saveInfo=null;
+  try{saveInfo=await saveEditor.status();}catch(e){saveInfo={error:e.message,helper:saveEditor.HELPER};}
+  const report={created:new Date().toISOString(),trainer:'0.4.0-save-item-editor',installation:installed,catalog:itemCatalog?itemCatalog.metadata:null,state,runtime,saveEditor:saveInfo,lastError,logs:recentLogs};
   const directory=path.join(DATA,'diagnostics');await fsp.mkdir(directory,{recursive:true});
   const file=path.join(directory,'diagnose-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json');
   await fsp.writeFile(file,JSON.stringify(report,null,2));
@@ -244,10 +321,12 @@ async function handle(cmd,args={}) {
   if(cmd==='backup')return backup();
   if(cmd==='diagnostics')return diagnostics();
   if(cmd==='catalog')return catalog(args);
+  if(cmd==='saveSlots')return saveSlots();
+  if(cmd==='addItem')return addItem(args);
   if(cmd==='rebuildCatalog'){const data=await ensureCatalog(true);return {count:data.items.length,message:'Spieldaten neu eingelesen.'};}
   const method=RPC_NAMES[cmd];if(!method)throw new Error('Unbekannter Befehl.');
   if(!reader)throw new Error('Bitte zuerst mit dem laufenden Spiel verbinden.');
-  if(cmd!=='inventory')throw new Error('Diese Version unterstützt ausschließlich das Lesen des Inventars und der Spielerwerte.');
+  if(cmd!=='inventory')throw new Error('Diese Version unterstützt im laufenden Spiel ausschließlich das Lesen des Inventars und der Spielerwerte. Gegenstände werden sicher über den geschlossenen Spielstand hinzugefügt.');
   await refresh();
   if(!state.playerReady||!state.capabilities.inventory)throw new Error('Das Inventar ist für den aktuellen Spielzustand nicht verfügbar.');
   const current=reader;
@@ -270,6 +349,7 @@ function main() {
   // Never auto-attach or write when the application is launched.
   fsp.mkdir(DATA,{recursive:true}).then(()=>fsp.writeFile(path.join(DATA,'settings.json'),JSON.stringify(settings,null,2))).catch(()=>{});
   emit({event:'state',data:state});
+  refreshSaveEditorState().catch(e=>log('Spielstand-Editor: '+e.message,'warn'));
   const input=readline.createInterface({input:process.stdin,crlfDelay:Infinity});
   input.on('line',line=>{
     if(line.length>32768){log('Zu großer Auftrag verworfen.','error');return;}
@@ -287,5 +367,5 @@ function main() {
     try{await refresh();}catch(e){log('Status konnte nicht gelesen werden: '+e.message,'error');}finally{polling=false;}
   },1500).unref();
 }
-module.exports={validateCommand,backup,listFiles,psLiteral,handle,FALSE_CAPS};
+module.exports={validateCommand,backup,listFiles,psLiteral,handle,FALSE_CAPS,isGameRunning,saveSlots,addItem};
 if(require.main===module)main();
