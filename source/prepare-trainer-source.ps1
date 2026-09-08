@@ -10,16 +10,19 @@ function Replace-Required([string]$Old, [string]$New, [string]$Name) {
   $script:text = $script:text.Replace($Old, $New)
 }
 function Replace-UniqueLine([string]$Contains, [string]$NewLine, [string]$Name) {
-  $newline = if ($script:text.Contains("`r`n")) { "`r`n" } else { "`n" }
+  # PowerShell variable names are case-insensitive. Do NOT call this local
+  # variable $newline: that would overwrite the $NewLine parameter and replace
+  # the target C# line with a line break, which caused the v0.5 startup NRE.
+  $lineEnding = if ($script:text.Contains("`r`n")) { "`r`n" } else { "`n" }
   $lines = $script:text -split "`r?`n", -1
   $matches = @()
   for ($i = 0; $i -lt $lines.Length; $i++) { if ($lines[$i].Contains($Contains)) { $matches += $i } }
   if ($matches.Count -ne 1) { throw "TrainerApp transform '$Name' expected exactly one line containing '$Contains', found $($matches.Count)." }
   $lines[$matches[0]] = $NewLine
-  $script:text = $lines -join $newline
+  $script:text = $lines -join $lineEnding
 }
 function Insert-BeforeUniqueLine([string]$Contains, [string]$NewLine, [string]$Name) {
-  $newline = if ($script:text.Contains("`r`n")) { "`r`n" } else { "`n" }
+  $lineEnding = if ($script:text.Contains("`r`n")) { "`r`n" } else { "`n" }
   $lines = $script:text -split "`r?`n", -1
   $matches = @()
   for ($i = 0; $i -lt $lines.Length; $i++) { if ($lines[$i].Contains($Contains)) { $matches += $i } }
@@ -27,7 +30,7 @@ function Insert-BeforeUniqueLine([string]$Contains, [string]$NewLine, [string]$N
   $i = $matches[0]
   $before = if ($i -gt 0) { $lines[0..($i-1)] } else { @() }
   $after = $lines[$i..($lines.Length-1)]
-  $script:text = @($before + $NewLine + $after) -join $newline
+  $script:text = @($before + $NewLine + $after) -join $lineEnding
 }
 
 Replace-Required `
