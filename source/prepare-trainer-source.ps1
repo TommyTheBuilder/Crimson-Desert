@@ -9,6 +9,17 @@ function Replace-Required([string]$Old, [string]$New, [string]$Name) {
   if (-not $script:text.Contains($Old)) { throw "TrainerApp-Transformation '$Name' konnte nicht angewendet werden. Der Quelltext ist gedriftet." }
   $script:text = $script:text.Replace($Old, $New)
 }
+function Replace-UniqueLine([string]$Contains, [string]$NewLine, [string]$Name) {
+  $newline = if ($script:text.Contains("`r`n")) { "`r`n" } else { "`n" }
+  $lines = $script:text -split "`r?`n", -1
+  $matches = @()
+  for ($i = 0; $i -lt $lines.Length; $i++) {
+    if ($lines[$i].Contains($Contains)) { $matches += $i }
+  }
+  if ($matches.Count -ne 1) { throw "TrainerApp-Transformation '$Name' erwartete genau eine Zeile mit '$Contains', gefunden: $($matches.Count)." }
+  $lines[$matches[0]] = $NewLine
+  $script:text = $lines -join $newline
+}
 
 Replace-Required `
 '        private bool Cap(string name) { return Flag(state, "connected") && Flag(Map(state, "capabilities"), name); }' `
@@ -20,17 +31,20 @@ Replace-Required `
 '            B("AddButton").IsEnabled = available && !Flag(state, "connected") && Cap("addItem") && itemAddable && Integer(state, "saveCount", 0) > 0;' `
 'addItem button gating'
 
-$oldNoSelection = '            if (selected == null) { Label("CatalogMetadata", ""); Label("CatalogAddStatus", LayoutUnavailable() ? "Hinzufügen nicht verfügbar: Die Spielanbindung muss an diese Version angepasst werden." : CanReadInventory() && !Cap("addItem") ? "Inventar lesbar; Hinzufügen ist für diese Spielversion noch nicht verfügbar." : Flag(state, "playerReady") && Cap("addItem") ? "Wähle einen Gegenstand zum Hinzufügen." : "Zum Hinzufügen einen Spielstand laden und den Trainer verbinden."); return; }'
-$newNoSelection = '            if (selected == null) { Label("CatalogMetadata", ""); Label("CatalogAddStatus", !Cap("addItem") ? "Hinzufügen nicht verfügbar: Der Save-Editor-Helfer fehlt im runtime-Ordner." : Flag(state, "connected") ? "Zum sicheren Hinzufügen Crimson Desert vollständig schließen." : Integer(state, "saveCount", 0) == 0 ? "Kein Spielstand gefunden. Speichere einmal im Spiel und schließe Crimson Desert." : "Wähle einen Gegenstand. Ziel: " + StringValue(state, "saveTargetDisplay", "neuester Spielstand") + ". Vor jeder Änderung wird automatisch gesichert."); return; }'
-Replace-Required $oldNoSelection $newNoSelection 'catalog empty-selection status'
+Replace-UniqueLine `
+'if (selected == null) { Label("CatalogMetadata", ""); Label("CatalogAddStatus"' `
+'            if (selected == null) { Label("CatalogMetadata", ""); Label("CatalogAddStatus", !Cap("addItem") ? "Hinzufügen nicht verfügbar: Der Save-Editor-Helfer fehlt im runtime-Ordner." : Flag(state, "connected") ? "Zum sicheren Hinzufügen Crimson Desert vollständig schließen." : Integer(state, "saveCount", 0) == 0 ? "Kein Spielstand gefunden. Speichere einmal im Spiel und schließe Crimson Desert." : "Wähle einen Gegenstand. Ziel: " + StringValue(state, "saveTargetDisplay", "neuester Spielstand") + ". Vor jeder Änderung wird automatisch gesichert."); return; }' `
+'catalog empty-selection status'
 
-$oldSelected = '            Label("CatalogAddStatus", LayoutUnavailable() ? "Hinzufügen nicht verfügbar: Die Spielanbindung muss an diese Version angepasst werden." : CanReadInventory() && !Cap("addItem") ? "Inventar lesbar; Hinzufügen ist für diese Spielversion noch nicht verfügbar." : Flag(item, "addable") && Flag(state, "playerReady") && Cap("addItem") ? "Zum Hinzufügen im Spiel bereit." : StringValue(item, "reason", "Zum Hinzufügen muss die Kennung im laufenden Spiel bestätigt werden."));'
-$newSelected = '            Label("CatalogAddStatus", !Cap("addItem") ? "Hinzufügen nicht verfügbar: Der Save-Editor-Helfer fehlt im runtime-Ordner." : Flag(state, "connected") ? "Zum sicheren Hinzufügen Crimson Desert vollständig schließen." : Integer(state, "saveCount", 0) == 0 ? "Kein Spielstand gefunden. Speichere einmal im Spiel und schließe Crimson Desert." : Flag(item, "addable") ? "Bereit für sicheren Spielstand-Edit. Ziel: " + StringValue(state, "saveTargetDisplay", "neuester Spielstand") + ". Automatische Sicherung ist aktiv." : StringValue(item, "reason", "Dieser Gegenstand kann nicht sicher hinzugefügt werden."));'
-Replace-Required $oldSelected $newSelected 'catalog selected-item status'
+Replace-UniqueLine `
+'Label("CatalogAddStatus", LayoutUnavailable()' `
+'            Label("CatalogAddStatus", !Cap("addItem") ? "Hinzufügen nicht verfügbar: Der Save-Editor-Helfer fehlt im runtime-Ordner." : Flag(state, "connected") ? "Zum sicheren Hinzufügen Crimson Desert vollständig schließen." : Integer(state, "saveCount", 0) == 0 ? "Kein Spielstand gefunden. Speichere einmal im Spiel und schließe Crimson Desert." : Flag(item, "addable") ? "Bereit für sicheren Spielstand-Edit. Ziel: " + StringValue(state, "saveTargetDisplay", "neuester Spielstand") + ". Automatische Sicherung ist aktiv." : StringValue(item, "reason", "Dieser Gegenstand kann nicht sicher hinzugefügt werden."));' `
+'catalog selected-item status'
 
-$oldTooltip = '            B("AddButton").ToolTip = LayoutUnavailable() ? "Die Spielanbindung muss an diese Version angepasst werden." : selectedCatalogItem != null && !itemAddable ? StringValue(selectedCatalogItem.Data, "reason", "Dieser Gegenstand wird noch nicht unterstützt.") : "Ausgewählten Gegenstand hinzufügen";'
-$newTooltip = '            B("AddButton").ToolTip = !Cap("addItem") ? "Der Save-Editor-Helfer fehlt im runtime-Ordner." : Flag(state, "connected") ? "Crimson Desert vollständig schließen; Spielstände werden niemals bearbeitet, solange das Spiel läuft." : Integer(state, "saveCount", 0) == 0 ? "Kein save.save gefunden." : selectedCatalogItem != null && !itemAddable ? StringValue(selectedCatalogItem.Data, "reason", "Dieser Gegenstand wird noch nicht unterstützt.") : "Ausgewählten Gegenstand mit automatischer Sicherung in den neuesten Spielstand einfügen";'
-Replace-Required $oldTooltip $newTooltip 'addItem tooltip'
+Replace-UniqueLine `
+'B("AddButton").ToolTip = LayoutUnavailable()' `
+'            B("AddButton").ToolTip = !Cap("addItem") ? "Der Save-Editor-Helfer fehlt im runtime-Ordner." : Flag(state, "connected") ? "Crimson Desert vollständig schließen; Spielstände werden niemals bearbeitet, solange das Spiel läuft." : Integer(state, "saveCount", 0) == 0 ? "Kein save.save gefunden." : selectedCatalogItem != null && !itemAddable ? StringValue(selectedCatalogItem.Data, "reason", "Dieser Gegenstand wird noch nicht unterstützt.") : "Ausgewählten Gegenstand mit automatischer Sicherung in den neuesten Spielstand einfügen";' `
+'addItem tooltip'
 
 $oldAction = '                case "rebuildCatalog": return "Gegenstände werden aus den Spieldaten eingelesen …";'
 $newAction = $oldAction + [Environment]::NewLine + '                case "addItem": return "Spielstand wird gesichert, geprüft und der Gegenstand eingefügt …";'
