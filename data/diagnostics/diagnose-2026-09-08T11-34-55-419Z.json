@@ -1,0 +1,325 @@
+{
+  "created": "2026-09-08T11:34:55.417Z",
+  "trainer": "0.2.0-preview",
+  "installation": {
+    "directory": "F:\\Steam\\steamapps\\common\\Crimson Desert",
+    "exe": "F:\\Steam\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+    "buildId": "25116796",
+    "fileVersion": "1.0.0.2760",
+    "size": 379781016,
+    "modified": "2026-09-05T12:56:04.812Z"
+  },
+  "catalog": {
+    "source": "Spieldateien · Deutsch",
+    "count": 6813,
+    "germanNames": 6741,
+    "internalNames": 72,
+    "created": "2026-09-08T11:28:33.862Z",
+    "gameDirectory": "F:\\Steam\\steamapps\\common\\Crimson Desert",
+    "archives": 35,
+    "archiveFiles": 2120243,
+    "files": [
+      {
+        "path": "gamedata/binarystaticinfo__/bin/iteminfo.staticinfoheader",
+        "archive": "0008/1.paz",
+        "bytes": 54506,
+        "sha256": "59f16d991f77876bb216c16affb50c3bbcbfea9190602c9fda1557a3e07123fe"
+      },
+      {
+        "path": "gamedata/binarystaticinfo__/bin/iteminfo.staticinfobody",
+        "archive": "0008/0.paz",
+        "bytes": 6450232,
+        "sha256": "e646e4a0281930aec1d6d750acaafe07740f60e0df5242041fc5bf57ae7abade"
+      },
+      {
+        "path": "gamedata/stringtable/binary__/ger/item.paloc",
+        "archive": "0027/0.paz",
+        "bytes": 1807536,
+        "sha256": "22680066b65f79f1bbc7f840285ab04f31eeee3479a38c6ba5e3c8fe9a3fb88a"
+      },
+      {
+        "path": "gamedata/stringtable/binary__/eng/item.paloc",
+        "archive": "0020/0.paz",
+        "bytes": 1552510,
+        "sha256": "0a02652eaf095360dfade7fb658f2d686b46e95f44c930479c70d41a06f3fafa"
+      },
+      {
+        "path": "gamedata/binarystaticinfo__/bin/itemgroupinfo.staticinfoheader",
+        "archive": "0008/1.paz",
+        "bytes": 9602,
+        "sha256": "f52b4a119ff3305d3b13d02e479a296492c2197809485a9fd207d028109bbe04"
+      },
+      {
+        "path": "gamedata/binarystaticinfo__/bin/itemgroupinfo.staticinfobody",
+        "archive": "0008/1.paz",
+        "bytes": 374037,
+        "sha256": "e368476c3c0d454943df2f1d4ec8d85dbf2bb1184c77e2c8e9c4f3d2cc7e1e8c"
+      },
+      {
+        "path": "gamedata/stringtable/binary__/ger/itemgroup.paloc",
+        "archive": "0027/0.paz",
+        "bytes": 68988,
+        "sha256": "c89006be253e573e929791297b2c3c8cbd1fd42f29ef2ba5948aca1ede0b9e28"
+      }
+    ]
+  },
+  "state": {
+    "connected": true,
+    "pid": 9812,
+    "playerReady": false,
+    "message": "Die Spielerstruktur dieser Spielversion wurde nicht eindeutig erkannt. Cheats bleiben deaktiviert; Einzelheiten stehen im Protokoll.",
+    "buildId": "25116796",
+    "fileVersion": "1.0.0.2760",
+    "health": null,
+    "maxHealth": null,
+    "stamina": null,
+    "maxStamina": null,
+    "spirit": null,
+    "maxSpirit": null,
+    "capabilities": {
+      "health": false,
+      "stamina": false,
+      "spirit": false,
+      "inventory": false,
+      "catalog": true,
+      "addItem": false,
+      "setQuantity": false,
+      "travel": false
+    },
+    "toggles": {
+      "health": false,
+      "stamina": false,
+      "spirit": false
+    },
+    "catalogBuilding": false,
+    "catalogMessage": "6813 Gegenstände aus den Spieldateien geladen.",
+    "catalogAvailable": true,
+    "catalogCount": 6813,
+    "catalogSource": "Spieldateien · Deutsch",
+    "layoutRecognized": false
+  },
+  "runtime": {
+    "scans": [
+      {
+        "name": "Spielerkennung 1",
+        "matches": 0,
+        "complete": true,
+        "rva": null
+      },
+      {
+        "name": "Spielerkennung 2",
+        "matches": 0,
+        "complete": true,
+        "rva": null
+      },
+      {
+        "name": "Spielerkennung 3",
+        "matches": 0,
+        "complete": true,
+        "rva": null
+      },
+      {
+        "name": "Spielaktualisierung",
+        "matches": 1,
+        "complete": true,
+        "rva": "0x418efc0"
+      },
+      {
+        "name": "inventory.core",
+        "matches": 0,
+        "complete": true,
+        "rva": null
+      },
+      {
+        "name": "inventory.holder",
+        "matches": 1,
+        "complete": true,
+        "rva": "0x2073710"
+      },
+      {
+        "name": "inventory.transaction",
+        "matches": 0,
+        "complete": true,
+        "rva": null
+      },
+      {
+        "name": "inventory.planner",
+        "matches": 0,
+        "complete": true,
+        "rva": null
+      },
+      {
+        "name": "inventory.ctor",
+        "matches": 0,
+        "complete": true,
+        "rva": null
+      },
+      {
+        "name": "inventory.placement",
+        "matches": 0,
+        "complete": true,
+        "rva": null
+      },
+      {
+        "name": "inventory.free",
+        "matches": 0,
+        "complete": true,
+        "rva": null
+      },
+      {
+        "name": "inventory.dtor",
+        "matches": 0,
+        "complete": true,
+        "rva": null
+      },
+      {
+        "name": "inventory.localization",
+        "matches": 0,
+        "complete": true,
+        "rva": null
+      },
+      {
+        "name": "travel: fast-travel function",
+        "matches": 0,
+        "complete": true,
+        "rva": null
+      }
+    ],
+    "state": {
+      "playerReady": false,
+      "layoutRecognized": false,
+      "health": null,
+      "maxHealth": null,
+      "stamina": null,
+      "maxStamina": null,
+      "spirit": null,
+      "maxSpirit": null,
+      "capabilities": {
+        "health": false,
+        "stamina": false,
+        "spirit": false,
+        "inventory": false,
+        "catalog": false,
+        "addItem": false,
+        "setQuantity": false,
+        "travel": false
+      },
+      "toggles": {
+        "health": false,
+        "stamina": false,
+        "spirit": false
+      },
+      "connected": true,
+      "pid": 9812,
+      "message": "Die Spielerstruktur dieser Spielversion wurde nicht eindeutig erkannt. Cheats bleiben deaktiviert; Einzelheiten stehen im Protokoll."
+    }
+  },
+  "lastError": "",
+  "logs": [
+    {
+      "time": "2026-09-08T11:28:33.533Z",
+      "level": "info",
+      "message": "Installation erkannt. Steam-Build 25116796, Dateiversion 1.0.0.2760. Die Spielfunktionen werden beim Verbinden geprüft."
+    },
+    {
+      "time": "2026-09-08T11:28:33.904Z",
+      "level": "info",
+      "message": "6813 Gegenstände geladen, davon 6741 mit deutschen Namen."
+    },
+    {
+      "time": "2026-09-08T11:32:03.385Z",
+      "level": "info",
+      "message": "Installation erkannt. Steam-Build 25116796, Dateiversion 1.0.0.2760. Die Spielfunktionen werden beim Verbinden geprüft."
+    },
+    {
+      "time": "2026-09-08T11:32:05.103Z",
+      "level": "info",
+      "message": "Spielerkennung 1: nicht erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:05.347Z",
+      "level": "info",
+      "message": "Spielerkennung 2: nicht erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:05.623Z",
+      "level": "info",
+      "message": "Spielerkennung 3: nicht erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:05.624Z",
+      "level": "info",
+      "message": "Spielerstruktur nicht unabhängig bestätigt; Schreibzugriffe bleiben deaktiviert."
+    },
+    {
+      "time": "2026-09-08T11:32:06.090Z",
+      "level": "info",
+      "message": "Spielaktualisierung: eindeutig erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:06.379Z",
+      "level": "info",
+      "message": "inventory.core: nicht erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:06.620Z",
+      "level": "info",
+      "message": "inventory.holder: eindeutig erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:06.870Z",
+      "level": "info",
+      "message": "inventory.transaction: nicht erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:07.115Z",
+      "level": "info",
+      "message": "inventory.planner: nicht erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:07.377Z",
+      "level": "info",
+      "message": "inventory.ctor: nicht erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:07.611Z",
+      "level": "info",
+      "message": "inventory.placement: nicht erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:07.879Z",
+      "level": "info",
+      "message": "inventory.free: nicht erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:08.134Z",
+      "level": "info",
+      "message": "inventory.dtor: nicht erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:08.564Z",
+      "level": "info",
+      "message": "inventory.localization: nicht erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:09.037Z",
+      "level": "info",
+      "message": "Inventartabellen: Gegenstände=false, Kategorien=false, Speicher=false"
+    },
+    {
+      "time": "2026-09-08T11:32:09.554Z",
+      "level": "info",
+      "message": "travel: fast-travel function: nicht erkannt"
+    },
+    {
+      "time": "2026-09-08T11:32:09.555Z",
+      "level": "info",
+      "message": "travel: disabled: Fast-travel signature unavailable"
+    },
+    {
+      "time": "2026-09-08T11:32:09.556Z",
+      "level": "info",
+      "message": "Verbindung hergestellt; nur erkannte Funktionen sind verfügbar."
+    }
+  ]
+}

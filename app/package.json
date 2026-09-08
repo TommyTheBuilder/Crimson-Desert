@@ -1,0 +1,9 @@
+{
+  "engines": {
+    "node": ">=24"
+  },
+  "description": "External read-only Crimson Desert inventory and local game-data catalog",
+  "private": true,
+  "name": "pywel-trainer-reader",
+  "version": "0.3.0"
+}
