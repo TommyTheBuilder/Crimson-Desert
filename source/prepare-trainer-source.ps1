@@ -36,6 +36,11 @@ Replace-Required `
 'live backend supervisor'
 
 Replace-Required `
+'        private TControl Find<TControl>(string name) where TControl : class { return window.FindName(name) as TControl; }' `
+'        private TControl Find<TControl>(string name) where TControl : class { TControl value = window.FindName(name) as TControl; if (value != null) return value; value = LogicalTreeHelper.FindLogicalNode(window, name) as TControl; if (value != null) return value; throw new InvalidOperationException("UI-Element fehlt oder hat einen falschen Typ: " + name + " (" + typeof(TControl).Name + ")"); }' `
+'WPF logical-tree control lookup'
+
+Replace-Required `
 '        private bool Cap(string name) { return Flag(state, "connected") && Flag(Map(state, "capabilities"), name); }' `
 '        private bool Cap(string name) { return (name == "addItem" || Flag(state, "connected")) && Flag(Map(state, "capabilities"), name); }' `
 'addItem capability outside reader connection'
