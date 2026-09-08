@@ -23,7 +23,7 @@ jobs:
           $references = @('System.dll','System.Core.dll','System.Web.Extensions.dll','WPF\WindowsBase.dll','WPF\PresentationCore.dll','WPF\PresentationFramework.dll','System.Xaml.dll') | ForEach-Object { '/reference:' + (Join-Path $framework $_) }
           $resource = '/resource:' + (Join-Path $source 'MainWindow.xaml') + ',PywelTrainer.MainWindow.xaml'
           $smoke = Join-Path $env:RUNNER_TEMP 'PywelTrainer.StartupSmoke.exe'
-          & $compiler /nologo /target:exe /platform:x64 /optimize+ /utf8output /main:StartupSmoke ('/out:' + $smoke) $resource @references $generated (Join-Path $source 'StartupSmoke.cs')
+          & $compiler /nologo /target:exe /platform:x64 /optimize- /debug:full /utf8output /main:StartupSmoke ('/out:' + $smoke) $resource @references $generated (Join-Path $source 'StartupSmoke.cs')
           if ($LASTEXITCODE -ne 0) { throw 'Smoke test compilation failed.' }
           & $smoke
           if ($LASTEXITCODE -ne 0) { throw 'Smoke test failed.' }
