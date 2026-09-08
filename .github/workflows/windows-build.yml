@@ -1,0 +1,64 @@
+name: Windows trainer build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Node sources
+        shell: pwsh
+        run: |
+          node --check app/backend.js
+          node --check app/save-editor.js
+          node --check app/game-items.js
+
+      - name: Build complete trainer
+        shell: powershell
+        run: |
+          Set-ExecutionPolicy -Scope Process Bypass -Force
+          .\source\build.ps1 -OutputDirectory $env:GITHUB_WORKSPACE
+
+      - name: Verify required executables
+        shell: pwsh
+        run: |
+          $files = @(
+            '.\PywelTrainer.exe',
+            '.\runtime\node.exe',
+            '.\runtime\PywelReader.exe',
+            '.\runtime\PywelSaveEditor.exe'
+          )
+          foreach ($file in $files) {
+            if (-not (Test-Path -LiteralPath $file)) { throw "Missing release file: $file" }
+            Get-Item -LiteralPath $file | Select-Object FullName,Length,LastWriteTime
+          }
+          Get-FileHash '.\runtime\PywelSaveEditor.exe' -Algorithm SHA256
+
+      - name: Package portable release
+        shell: pwsh
+        run: |
+          $release = Join-Path $env:RUNNER_TEMP 'CrimsonTrainer'
+          New-Item -ItemType Directory -Force -Path $release | Out-Null
+          Copy-Item '.\PywelTrainer.exe' $release
+          Copy-Item '.\LIESMICH.md' $release
+          foreach ($dir in @('app','runtime','licenses','source')) {
+            Copy-Item (Join-Path $env:GITHUB_WORKSPACE $dir) (Join-Path $release $dir) -Recurse
+          }
+          $zip = Join-Path $env:RUNNER_TEMP 'CrimsonTrainer.zip'
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path (Join-Path $release '*') -DestinationPath $zip -CompressionLevel Optimal
+          Write-Output "Release: $zip"
+
+      - name: Upload portable trainer
+        uses: actions/upload-artifact@v4
+        with:
+          name: CrimsonTrainer-windows-x64
+          path: ${{ runner.temp }}\CrimsonTrainer.zip
+          if-no-files-found: error
+          retention-days: 14
