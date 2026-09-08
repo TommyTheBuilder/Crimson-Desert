@@ -33,7 +33,7 @@ $newTooltip = '            B("AddButton").ToolTip = !Cap("addItem") ? "Der Save-
 Replace-Required $oldTooltip $newTooltip 'addItem tooltip'
 
 $oldAction = '                case "rebuildCatalog": return "Gegenstände werden aus den Spieldaten eingelesen …";'
-$newAction = '                case "rebuildCatalog": return "Gegenstände werden aus den Spieldaten eingelesen …";`r`n                case "addItem": return "Spielstand wird gesichert, geprüft und der Gegenstand eingefügt …";'
+$newAction = $oldAction + [Environment]::NewLine + '                case "addItem": return "Spielstand wird gesichert, geprüft und der Gegenstand eingefügt …";'
 Replace-Required $oldAction $newAction 'addItem action label'
 
 $out = [IO.Path]::GetFullPath($Output)
